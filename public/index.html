@@ -678,71 +678,71 @@
                             <div class="price-info">
                                 <div class="price-item">
                                     <span class="label">Entry:</span>
-                                    <span class="value">${trade.entryPrice || 'Not detected'}</span>
+                                    <span class="value">${trade.entry_price || trade.entryPrice || 'Not detected'}</span>
                                 </div>
                                 <div class="price-item">
                                     <span class="label">Stop Loss:</span>
-                                    <span class="value">${trade.stopLoss || 'Not detected'}</span>
+                                    <span class="value">${trade.stop_loss || trade.stopLoss || 'Not detected'}</span>
                                 </div>
                                 <div class="price-item">
                                     <span class="label">Take Profit:</span>
-                                    <span class="value">${trade.takeProfit || 'Not detected'}</span>
+                                    <span class="value">${trade.take_profit || trade.takeProfit || 'Not detected'}</span>
                                 </div>
                             </div>
                             <div class="trade-metrics">
                                 <div class="metric-item">
                                     <span class="label">Risk/Reward:</span>
-                                    <span class="value">${trade.plannedRR ? trade.plannedRR.toFixed(2) : 'Not calculated'}</span>
+                                    <span class="value">${trade.planned_rr || trade.plannedRR ? (trade.planned_rr || trade.plannedRR).toFixed(2) : 'Not calculated'}</span>
                                 </div>
                                 <div class="metric-item">
                                     <span class="label">P&L:</span>
-                                    <span class="value ${trade.actualPnL > 0 ? 'profit' : trade.actualPnL < 0 ? 'loss' : ''}">${trade.actualPnL ? `$${trade.actualPnL.toFixed(2)}` : 'Not calculated'}</span>
+                                    <span class="value ${(trade.actual_pnl || trade.actualPnL) > 0 ? 'profit' : (trade.actual_pnl || trade.actualPnL) < 0 ? 'loss' : ''}">${(trade.actual_pnl || trade.actualPnL) ? `$${(trade.actual_pnl || trade.actualPnL).toFixed(2)}` : 'Not calculated'}</span>
                                 </div>
                                 <div class="metric-item">
                                     <span class="label">Exit Price:</span>
-                                    <span class="value">${trade.exitPrice || 'Not available'}</span>
+                                    <span class="value">${trade.exit_price || trade.exitPrice || 'Not available'}</span>
                                 </div>
-                                ${trade.plannedQty && trade.actualQty !== undefined ? `
+                                ${(trade.planned_qty || trade.plannedQty) && (trade.actual_qty !== undefined || trade.actualQty !== undefined) ? `
                                 <div class="metric-item">
                                     <span class="label">Position Size:</span>
                                     <span class="value">
                                         ${trade.symbol && (trade.symbol.includes('!') || trade.symbol.includes('CME')) ? 
-                                            `${trade.plannedQty.toFixed(6)} → ${trade.actualQty} contracts` : 
-                                            `${trade.plannedQty.toFixed(6)} units (exact)`
+                                            `${(trade.planned_qty || trade.plannedQty).toFixed(6)} → ${(trade.actual_qty || trade.actualQty)} contracts` : 
+                                            `${(trade.planned_qty || trade.plannedQty).toFixed(6)} units (exact)`
                                         }
                                     </span>
                                 </div>
                                 ` : ''}
-                                ${trade.plannedRisk && trade.actualRisk ? `
+                                ${(trade.planned_risk || trade.plannedRisk) && (trade.actual_risk || trade.actualRisk) ? `
                                 <div class="metric-item">
                                     <span class="label">Planned Risk:</span>
-                                    <span class="value">$${trade.plannedRisk.toFixed(2)}</span>
+                                    <span class="value">$${(trade.planned_risk || trade.plannedRisk).toFixed(2)}</span>
                                 </div>
                                 <div class="metric-item">
                                     <span class="label">Actual Risk:</span>
-                                    <span class="value ${Math.abs(trade.actualRisk - trade.plannedRisk) > 1 ? (trade.actualRisk > trade.plannedRisk ? 'risk-higher' : 'risk-lower') : ''}">
-                                        $${trade.actualRisk.toFixed(2)}
+                                    <span class="value ${Math.abs((trade.actual_risk || trade.actualRisk) - (trade.planned_risk || trade.plannedRisk)) > 1 ? ((trade.actual_risk || trade.actualRisk) > (trade.planned_risk || trade.plannedRisk) ? 'risk-higher' : 'risk-lower') : ''}">
+                                        $${(trade.actual_risk || trade.actualRisk).toFixed(2)}
                                     </span>
                                 </div>
-                                ${Math.abs(trade.actualRisk - trade.plannedRisk) > 1 ? `
+                                ${Math.abs((trade.actual_risk || trade.actualRisk) - (trade.planned_risk || trade.plannedRisk)) > 1 ? `
                                 <div class="metric-item">
                                     <span class="label">Risk Difference:</span>
-                                    <span class="value ${trade.actualRisk > trade.plannedRisk ? 'risk-higher' : 'risk-lower'}">
-                                        ${trade.actualRisk > trade.plannedRisk ? '+' : ''}$${(trade.actualRisk - trade.plannedRisk).toFixed(2)}
-                                        (${((trade.actualRisk / trade.plannedRisk - 1) * 100).toFixed(1)}%)
+                                    <span class="value ${(trade.actual_risk || trade.actualRisk) > (trade.planned_risk || trade.plannedRisk) ? 'risk-higher' : 'risk-lower'}">
+                                        ${(trade.actual_risk || trade.actualRisk) > (trade.planned_risk || trade.plannedRisk) ? '+' : ''}$${((trade.actual_risk || trade.actualRisk) - (trade.planned_risk || trade.plannedRisk)).toFixed(2)}
+                                        (${(((trade.actual_risk || trade.actualRisk) / (trade.planned_risk || trade.plannedRisk) - 1) * 100).toFixed(1)}%)
                                     </span>
                                 </div>
                                 ` : ''}
                                 ` : ''}
                             </div>
-                            ${trade.riskAdjustment && trade.riskAdjustment !== 'normal' ? `
-                            <div class="risk-warning ${trade.riskAdjustment}">
-                                ${trade.riskAdjustment === 'highRisk' ? '⚠️ HIGH RISK: Small futures position rounded up significantly' : ''}
-                                ${trade.riskAdjustment === 'extremeRisk' ? '🚨 EXTREME RISK: Consider using micro contracts (MNQ) or skipping trade' : ''}
-                                ${trade.riskAdjustment === 'moderateRisk' ? '⚠️ MODERATE RISK: Futures contract rounding increases risk by 25%+' : ''}
-                                ${trade.riskAdjustment === 'lowerRisk' ? '📉 LOWER RISK: Futures contract rounding decreases risk' : ''}
-                                ${trade.riskAdjustment === 'cannotTrade' ? '❌ CANNOT TRADE: Futures position too small for whole contracts (risk would increase 5x+)' : ''}
-                                ${trade.riskAdjustment === 'noRoundingNeeded' ? '💱 CFD TRADE: Using exact fractional position - no rounding required' : ''}
+                            ${(trade.risk_adjustment || trade.riskAdjustment) && (trade.risk_adjustment || trade.riskAdjustment) !== 'normal' ? `
+                            <div class="risk-warning ${trade.risk_adjustment || trade.riskAdjustment}">
+                                ${(trade.risk_adjustment || trade.riskAdjustment) === 'highRisk' || (trade.risk_adjustment || trade.riskAdjustment) === 'high_risk' ? '⚠️ HIGH RISK: Small futures position rounded up significantly' : ''}
+                                ${(trade.risk_adjustment || trade.riskAdjustment) === 'extremeRisk' || (trade.risk_adjustment || trade.riskAdjustment) === 'extreme_risk' ? '🚨 EXTREME RISK: Consider using micro contracts (MNQ) or skipping trade' : ''}
+                                ${(trade.risk_adjustment || trade.riskAdjustment) === 'moderateRisk' || (trade.risk_adjustment || trade.riskAdjustment) === 'moderate_risk' ? '⚠️ MODERATE RISK: Futures contract rounding increases risk by 25%+' : ''}
+                                ${(trade.risk_adjustment || trade.riskAdjustment) === 'lowerRisk' || (trade.risk_adjustment || trade.riskAdjustment) === 'lower_risk' ? '📉 LOWER RISK: Futures contract rounding decreases risk' : ''}
+                                ${(trade.risk_adjustment || trade.riskAdjustment) === 'cannotTrade' || (trade.risk_adjustment || trade.riskAdjustment) === 'cannot_trade' ? '❌ CANNOT TRADE: Futures position too small for whole contracts (risk would increase 5x+)' : ''}
+                                ${(trade.risk_adjustment || trade.riskAdjustment) === 'noRoundingNeeded' || (trade.risk_adjustment || trade.riskAdjustment) === 'no_rounding_needed' ? '💱 CFD TRADE: Using exact fractional position - no rounding required' : ''}
                             </div>
                             ` : ''}
                         </div>
@@ -792,10 +792,10 @@
                             </button>
                         </div>
                         <div class="trade-prices">
-                            <span>Entry: ${trade.entryPrice || 'N/A'}</span>
-                            <span>Stop: ${trade.stopLoss || 'N/A'}</span>
-                            <span>Target: ${trade.takeProfit || 'N/A'}</span>
-                            ${trade.actualPnL ? `<span class="pnl ${trade.actualPnL > 0 ? 'profit' : 'loss'}">P&L: ${trade.actualPnL > 0 ? '+' : ''}${trade.actualPnL}</span>` : ''}
+                            <span>Entry: ${trade.entry_price || trade.entryPrice || 'N/A'}</span>
+                            <span>Stop: ${trade.stop_loss || trade.stopLoss || 'N/A'}</span>
+                            <span>Target: ${trade.take_profit || trade.takeProfit || 'N/A'}</span>
+                            ${trade.actual_pnl || trade.actualPnL ? `<span class="pnl ${trade.actual_pnl || trade.actualPnL > 0 ? 'profit' : 'loss'}">P&L: ${trade.actual_pnl || trade.actualPnL > 0 ? '+' : ''}${trade.actual_pnl || trade.actualPnL}</span>` : ''}
                         </div>
                         ${trade.screenshotPath ? `
                         <div class="trade-screenshot-indicator">
@@ -880,15 +880,15 @@
                 document.getElementById('editTradeId').value = trade.id;
                 document.getElementById('editSymbol').value = trade.symbol || '';
                 document.getElementById('editDirection').value = trade.direction || 'long';
-                document.getElementById('editEntryPrice').value = trade.entryPrice || '';
-                document.getElementById('editStopLoss').value = trade.stopLoss || '';
-                document.getElementById('editTakeProfit').value = trade.takeProfit || '';
-                document.getElementById('editExitPrice').value = trade.exitPrice || '';
+                document.getElementById('editEntryPrice').value = trade.entry_price || trade.entryPrice || '';
+                document.getElementById('editStopLoss').value = trade.stop_loss || trade.stopLoss || '';
+                document.getElementById('editTakeProfit').value = trade.take_profit || trade.takeProfit || '';
+                document.getElementById('editExitPrice').value = trade.exit_price || trade.exitPrice || '';
                 document.getElementById('editOutcome').value = trade.outcome || 'pending';
-                document.getElementById('editActualRisk').value = trade.actualRisk || '';
-                document.getElementById('editPlannedRisk').value = trade.plannedRisk || '';
-                document.getElementById('editActualQty').value = trade.actualQty || '';
-                document.getElementById('editPlannedQty').value = trade.plannedQty || '';
+                document.getElementById('editActualRisk').value = trade.actual_risk || trade.actualRisk || '';
+                document.getElementById('editPlannedRisk').value = trade.planned_risk || trade.plannedRisk || '';
+                document.getElementById('editActualQty').value = trade.actual_qty || trade.actualQty || '';
+                document.getElementById('editPlannedQty').value = trade.planned_qty || trade.plannedQty || '';
                 
                 // Show the modal
                 document.getElementById('editModal').style.display = 'flex';
@@ -1053,19 +1053,19 @@
                     <div class="price-grid">
                         <div class="price-item">
                             <span class="label">Entry Price:</span>
-                            <span class="value price-entry">${trade.entryPrice || 'Not detected'}</span>
+                            <span class="value price-entry">${trade.entry_price || trade.entryPrice || 'Not detected'}</span>
                         </div>
                         <div class="price-item">
                             <span class="label">Stop Loss:</span>
-                            <span class="value price-stop">${trade.stopLoss || 'Not detected'}</span>
+                            <span class="value price-stop">${trade.stop_loss || trade.stopLoss || 'Not detected'}</span>
                         </div>
                         <div class="price-item">
                             <span class="label">Take Profit:</span>
-                            <span class="value price-target">${trade.takeProfit || 'Not detected'}</span>
+                            <span class="value price-target">${trade.take_profit || trade.takeProfit || 'Not detected'}</span>
                         </div>
                         <div class="price-item">
                             <span class="label">Exit Price:</span>
-                            <span class="value price-exit">${trade.exitPrice || 'Not available'}</span>
+                            <span class="value price-exit">${trade.exit_price || trade.exitPrice || 'Not available'}</span>
                         </div>
                     </div>
                 `;
@@ -1075,7 +1075,7 @@
                     <div class="performance-grid">
                         <div class="metric-item">
                             <span class="label">Planned R/R:</span>
-                            <span class="value">${trade.plannedRR ? trade.plannedRR.toFixed(2) : 'Not calculated'}</span>
+                            <span class="value">${trade.planned_rr || trade.plannedRR ? (trade.planned_rr || trade.plannedRR).toFixed(2) : 'Not calculated'}</span>
                         </div>
                         <div class="metric-item">
                             <span class="label">Actual R/R:</span>
@@ -1083,17 +1083,17 @@
                         </div>
                         <div class="metric-item">
                             <span class="label">P&L:</span>
-                            <span class="value pnl-value ${trade.actualPnL > 0 ? 'profit' : trade.actualPnL < 0 ? 'loss' : ''}">
-                                ${trade.actualPnL ? `${trade.actualPnL > 0 ? '+' : ''}$${trade.actualPnL.toFixed(2)}` : 'Not calculated'}
+                            <span class="value pnl-value ${trade.actual_pnl || trade.actualPnL > 0 ? 'profit' : trade.actual_pnl || trade.actualPnL < 0 ? 'loss' : ''}">
+                                ${trade.actual_pnl || trade.actualPnL ? `${trade.actual_pnl || trade.actualPnL > 0 ? '+' : ''}$${(trade.actual_pnl || trade.actualPnL).toFixed(2)}` : 'Not calculated'}
                             </span>
                         </div>
                         <div class="metric-item">
                             <span class="label">Position Size:</span>
-                            <span class="value">${trade.actualQty ? `${trade.actualQty} ${trade.symbol?.includes('!') ? 'contracts' : 'units'}` : 'Not calculated'}</span>
+                            <span class="value">${trade.actual_qty || trade.actualQty ? `${(trade.actual_qty || trade.actualQty)} ${trade.symbol?.includes('!') ? 'contracts' : 'units'}` : 'Not calculated'}</span>
                         </div>
                         <div class="metric-item">
                             <span class="label">Risk Amount:</span>
-                            <span class="value">${trade.actualRisk ? `$${trade.actualRisk.toFixed(2)}` : 'Not calculated'}</span>
+                            <span class="value">${trade.actual_risk || trade.actualRisk ? `$${(trade.actual_risk || trade.actualRisk).toFixed(2)}` : 'Not calculated'}</span>
                         </div>
                     </div>
                 `;
