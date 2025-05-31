@@ -148,12 +148,12 @@ app.post('/api/upload-trade', upload.single('screenshot'), async (req, res) => {
 
         console.log('Processing uploaded file:', req.file.filename);
 
-        // Store file in appropriate storage (Vercel Blob for production, local for dev)
+        // Extract trade data from screenshot FIRST (before moving/deleting file)
+        const tradeData = await tradeExtractor.extractTradeData(req.file.path);
+        
+        // Then store file in appropriate storage (Vercel Blob for production, local for dev)
         const storedPath = await storeFile(req.file.path, req.file.filename);
         console.log('🗃️ File stored with path:', storedPath);
-
-        // Extract trade data from screenshot (use original path for processing)
-        const tradeData = await tradeExtractor.extractTradeData(req.file.path);
         
         // Add metadata
         tradeData.id = uuidv4();
