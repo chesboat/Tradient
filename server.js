@@ -281,27 +281,21 @@ function parseTradingViewData(tradeData) {
                         console.log('🕐 Analyzing timestamps:', {
                             firstPoint: firstPoint,
                             lastPoint: lastPoint,
-                            hasTime: firstPoint.time !== undefined
+                            hasTimeT: firstPoint.time_t !== undefined
                         });
                         
-                        // TradingView timestamps are usually in milliseconds or seconds
+                        // TradingView uses 'time_t' field with Unix timestamps in seconds
                         let tradeTimestamp = null;
                         
-                        if (lastPoint.time) {
-                            tradeTimestamp = lastPoint.time;
-                        } else if (firstPoint.time) {
-                            tradeTimestamp = firstPoint.time;
+                        if (lastPoint.time_t) {
+                            tradeTimestamp = lastPoint.time_t;
+                        } else if (firstPoint.time_t) {
+                            tradeTimestamp = firstPoint.time_t;
                         }
                         
                         if (tradeTimestamp) {
-                            // Convert timestamp to date
-                            let tradeDate = new Date(tradeTimestamp);
-                            
-                            // Handle both seconds and milliseconds timestamps
-                            if (tradeTimestamp < 1000000000000) {
-                                // Timestamp is in seconds, convert to milliseconds
-                                tradeDate = new Date(tradeTimestamp * 1000);
-                            }
+                            // TradingView time_t is in seconds, convert to milliseconds for JavaScript Date
+                            const tradeDate = new Date(tradeTimestamp * 1000);
                             
                             // Format as YYYY-MM-DD for storage
                             const formattedDate = tradeDate.toISOString().split('T')[0];
@@ -309,12 +303,14 @@ function parseTradingViewData(tradeData) {
                             
                             console.log('🎯 Extracted trade date:', {
                                 originalTimestamp: tradeTimestamp,
+                                timestampInMs: tradeTimestamp * 1000,
                                 parsedDate: tradeDate.toISOString(),
                                 storedDate: formattedDate,
-                                humanReadable: tradeDate.toLocaleDateString()
+                                humanReadable: tradeDate.toLocaleDateString(),
+                                localTime: tradeDate.toLocaleString()
                             });
                         } else {
-                            console.log('⚠️ No timestamp found in TradingView data, using current date');
+                            console.log('⚠️ No time_t found in TradingView data, using current date');
                         }
                     }
                     
@@ -330,10 +326,18 @@ function parseTradingViewData(tradeData) {
                     
                     // Extract symbol
                     if (source.state && source.state.symbol) {
-                        const symbolMatch = source.state.symbol.match(/([A-Z0-9!]+)$/);
-                        if (symbolMatch) {
-                            trade.symbol = symbolMatch[1];
+                        // Handle different symbol formats: "CME_MINI:MNQ1!", "NASDAQ:AAPL", "NQ1!"
+                        const symbolString = source.state.symbol;
+                        console.log('🏷️ Raw symbol from TradingView:', symbolString);
+                        
+                        // Extract the actual trading symbol (after colon if present, otherwise use as-is)
+                        if (symbolString.includes(':')) {
+                            trade.symbol = symbolString.split(':')[1]; // "CME_MINI:MNQ1!" -> "MNQ1!"
+                        } else {
+                            trade.symbol = symbolString; // "NQ1!" -> "NQ1!"
                         }
+                        
+                        console.log('🎯 Extracted symbol:', trade.symbol);
                     }
                     
                     // Extract timeframe
@@ -343,11 +347,15 @@ function parseTradingViewData(tradeData) {
                     
                     // Determine direction from tool type
                     if (source.type) {
-                        if (source.type.includes('Short')) {
+                        console.log('🧭 TradingView tool type:', source.type);
+                        
+                        if (source.type.includes('Short') || source.type.includes('RiskRewardShort')) {
                             trade.direction = 'short';
-                        } else if (source.type.includes('Long')) {
+                        } else if (source.type.includes('Long') || source.type.includes('RiskRewardLong')) {
                             trade.direction = 'long';
                         }
+                        
+                        console.log('🎯 Detected direction:', trade.direction);
                     }
                     
                     // Extract prices from points array
