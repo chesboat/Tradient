@@ -1325,7 +1325,7 @@
                 
                 // Collect week data
                 const dayTrades = getTradesForDate(currentDay);
-                const dayPnL = dayTrades.reduce((sum, trade) => sum + (trade.actual_pnl || 0), 0);
+                const dayPnL = dayTrades.reduce((sum, trade) => sum + (trade.actualPnL || trade.actual_pnl || 0), 0);
                 weekPnL += dayPnL;
                 weekCount += dayTrades.length;
                 weekTrades = weekTrades.concat(dayTrades);
@@ -1369,7 +1369,7 @@
         function createCalendarDay(date, dayNumber) {
             const dayElement = document.createElement('div');
             const dayTrades = getTradesForDate(date);
-            const totalPnL = dayTrades.reduce((sum, trade) => sum + (trade.actual_pnl || 0), 0);
+            const totalPnL = dayTrades.reduce((sum, trade) => sum + (trade.actualPnL || trade.actual_pnl || 0), 0);
             const hasJournalNotes = dayTrades.some(trade => trade.reasoning && trade.reasoning.trim().length > 0);
             
             // Determine day class
@@ -1399,9 +1399,18 @@
         }
 
         function getTradesForDate(date) {
-            const targetDate = date.toISOString().split('T')[0];
+            // Format date without timezone conversion to avoid offset issues
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const targetDate = `${year}-${month}-${day}`;
+            
             return allTrades.filter(trade => {
-                const tradeDate = new Date(trade.date).toISOString().split('T')[0];
+                // Handle both date formats that might be in the database
+                let tradeDate = trade.date;
+                if (tradeDate.includes('T')) {
+                    tradeDate = tradeDate.split('T')[0]; // Remove time part if present
+                }
                 return tradeDate === targetDate;
             });
         }
@@ -1420,7 +1429,7 @@
                 return tradeDate.getFullYear() === year && tradeDate.getMonth() === month;
             });
             
-            const monthlyPnL = monthlyTrades.reduce((sum, trade) => sum + (trade.actual_pnl || 0), 0);
+            const monthlyPnL = monthlyTrades.reduce((sum, trade) => sum + (trade.actualPnL || trade.actual_pnl || 0), 0);
             const monthlyPnLElement = document.getElementById('monthlyPnL');
             
             monthlyPnLElement.textContent = `${monthlyPnL >= 0 ? '+' : ''}$${monthlyPnL.toFixed(2)}`;
@@ -1455,9 +1464,9 @@
             document.getElementById('dailyTradesTitle').textContent = `📅 ${dateStr}`;
             
             // Update daily summary
-            const totalPnL = trades.reduce((sum, trade) => sum + (trade.actual_pnl || 0), 0);
-            const winTrades = trades.filter(trade => (trade.actual_pnl || 0) > 0).length;
-            const lossTrades = trades.filter(trade => (trade.actual_pnl || 0) < 0).length;
+            const totalPnL = trades.reduce((sum, trade) => sum + (trade.actualPnL || trade.actual_pnl || 0), 0);
+            const winTrades = trades.filter(trade => (trade.actualPnL || trade.actual_pnl || 0) > 0).length;
+            const lossTrades = trades.filter(trade => (trade.actualPnL || trade.actual_pnl || 0) < 0).length;
             const winRate = trades.length > 0 ? ((winTrades / trades.length) * 100).toFixed(1) : '0';
             
             document.getElementById('dailySummary').innerHTML = `
@@ -1494,15 +1503,15 @@
                                 <span class="daily-trade-symbol">${trade.symbol}</span>
                                 <span class="daily-trade-direction ${trade.direction}">${trade.direction?.toUpperCase() || 'Unknown'}</span>
                             </div>
-                            <span class="daily-trade-pnl ${(trade.actual_pnl || 0) > 0 ? 'profit' : (trade.actual_pnl || 0) < 0 ? 'loss' : ''}">
-                                ${(trade.actual_pnl || 0) >= 0 ? '+' : ''}$${(trade.actual_pnl || 0).toFixed(2)}
+                            <span class="daily-trade-pnl ${(trade.actualPnL || trade.actual_pnl || 0) > 0 ? 'profit' : (trade.actualPnL || trade.actual_pnl || 0) < 0 ? 'loss' : ''}">
+                                ${(trade.actualPnL || trade.actual_pnl || 0) >= 0 ? '+' : ''}$${(trade.actualPnL || trade.actual_pnl || 0).toFixed(2)}
                             </span>
                         </div>
                         <div class="daily-trade-details">
-                            <span>Entry: ${trade.entry_price || 'N/A'}</span>
-                            <span>Exit: ${trade.exit_price || 'N/A'}</span>
-                            <span>R/R: ${trade.planned_rr ? trade.planned_rr.toFixed(2) : 'N/A'}</span>
-                            <span class="daily-trade-time">${new Date(trade.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span>Entry: ${trade.entry_price || trade.entryPrice || 'N/A'}</span>
+                            <span>Exit: ${trade.exit_price || trade.exitPrice || 'N/A'}</span>
+                            <span>R/R: ${trade.planned_rr || trade.plannedRR ? (trade.planned_rr || trade.plannedRR).toFixed(2) : 'N/A'}</span>
+                            <span class="daily-trade-time">${new Date(trade.created_at || trade.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                         ${trade.reasoning ? `<div style="margin-top: 8px; font-size: 0.85rem; color: #6b7280; font-style: italic;">"${trade.reasoning.length > 80 ? trade.reasoning.substring(0, 80) + '...' : trade.reasoning}"</div>` : ''}
                     </div>
