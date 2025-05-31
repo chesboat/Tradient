@@ -236,7 +236,7 @@ function parseTradingViewData(tradeData) {
         symbol: 'Unknown',
         direction: 'unknown',
         timeframe: 'unknown',
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString().split('T')[0], // Default fallback date
         entry_price: null,
         stop_loss: null,
         take_profit: null,
@@ -271,6 +271,62 @@ function parseTradingViewData(tradeData) {
                 
                 if (clipData.sources && clipData.sources[0]) {
                     const source = clipData.sources[0].source;
+                    
+                    // 🕐 EXTRACT ACTUAL TRADE DATE from TradingView data
+                    if (source.points && source.points.length > 0) {
+                        // Look for timestamp information in the points
+                        const firstPoint = source.points[0];
+                        const lastPoint = source.points[source.points.length - 1];
+                        
+                        console.log('🕐 Analyzing timestamps:', {
+                            firstPoint: firstPoint,
+                            lastPoint: lastPoint,
+                            hasTime: firstPoint.time !== undefined
+                        });
+                        
+                        // TradingView timestamps are usually in milliseconds or seconds
+                        let tradeTimestamp = null;
+                        
+                        if (lastPoint.time) {
+                            tradeTimestamp = lastPoint.time;
+                        } else if (firstPoint.time) {
+                            tradeTimestamp = firstPoint.time;
+                        }
+                        
+                        if (tradeTimestamp) {
+                            // Convert timestamp to date
+                            let tradeDate = new Date(tradeTimestamp);
+                            
+                            // Handle both seconds and milliseconds timestamps
+                            if (tradeTimestamp < 1000000000000) {
+                                // Timestamp is in seconds, convert to milliseconds
+                                tradeDate = new Date(tradeTimestamp * 1000);
+                            }
+                            
+                            // Format as YYYY-MM-DD for storage
+                            const formattedDate = tradeDate.toISOString().split('T')[0];
+                            trade.date = formattedDate;
+                            
+                            console.log('🎯 Extracted trade date:', {
+                                originalTimestamp: tradeTimestamp,
+                                parsedDate: tradeDate.toISOString(),
+                                storedDate: formattedDate,
+                                humanReadable: tradeDate.toLocaleDateString()
+                            });
+                        } else {
+                            console.log('⚠️ No timestamp found in TradingView data, using current date');
+                        }
+                    }
+                    
+                    // If no timestamp found, try to extract from other fields
+                    if (trade.date === new Date().toISOString().split('T')[0] && source.state) {
+                        // Look for any date-related fields in the state
+                        Object.keys(source.state).forEach(key => {
+                            if (key.toLowerCase().includes('time') || key.toLowerCase().includes('date')) {
+                                console.log(`🕐 Found potential date field: ${key} = ${source.state[key]}`);
+                            }
+                        });
+                    }
                     
                     // Extract symbol
                     if (source.state && source.state.symbol) {
