@@ -10,6 +10,16 @@ const { extractTradeData } = require('./src/tradeExtractor');
 const tradeExtractor = require('./src/tradeExtractor');
 const database = require('./src/database');
 
+// Import Vercel Blob for production file storage
+let vercelBlob = null;
+if (process.env.NODE_ENV === 'production') {
+    try {
+        vercelBlob = require('@vercel/blob');
+    } catch (error) {
+        console.warn('⚠️ Vercel Blob not available, using local storage');
+    }
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -64,6 +74,32 @@ try {
     console.warn('⚠️  Continuing without database support');
 }
 
+// Function to handle file upload to appropriate storage
+async function storeFile(filePath, filename) {
+    try {
+        if (process.env.NODE_ENV === 'production' && vercelBlob) {
+            // Production: Use Vercel Blob
+            const fileBuffer = fs.readFileSync(filePath);
+            const blob = await vercelBlob.put(filename, fileBuffer, {
+                access: 'public',
+            });
+            
+            // Clean up local temp file
+            fs.unlinkSync(filePath);
+            
+            console.log('📸 File stored in Vercel Blob:', blob.url);
+            return blob.url;
+        } else {
+            // Development: Use local storage with proper URL prefix
+            return `/uploads/${path.basename(filePath)}`;
+        }
+    } catch (error) {
+        console.error('Error storing file:', error);
+        // Fallback to local path
+        return `/uploads/${path.basename(filePath)}`;
+    }
+}
+
 console.log('🚀 PropJournal server starting...');
 console.log('📊 Ready to process TradingView position tool data!');
 
@@ -90,21 +126,21 @@ app.post('/api/upload-trade', upload.single('screenshot'), async (req, res) => {
 
         console.log('Processing uploaded file:', req.file.filename);
 
-        // Extract trade data from screenshot
+        // Store file in appropriate storage (Vercel Blob for production, local for dev)
+        const storedPath = await storeFile(req.file.path, req.file.filename);
+
+        // Extract trade data from screenshot (use original path for processing)
         const tradeData = await tradeExtractor.extractTradeData(req.file.path);
         
         // Add metadata
         tradeData.id = uuidv4();
         tradeData.timestamp = new Date().toISOString();
-        tradeData.screenshotPath = req.file.path;
-        tradeData.screenshot_path = req.file.path; // Add this for database consistency
+        tradeData.screenshotPath = storedPath; // Use the stored path (URL for production)
+        tradeData.screenshot_path = storedPath; // Add this for database consistency
         tradeData.originalFilename = req.file.originalname;
 
         // Save to database
         await database.saveTrade(tradeData);
-
-        // Clean up uploaded file after processing (optional)
-        // fs.unlinkSync(req.file.path);
 
         res.json({
             success: true,
@@ -130,18 +166,21 @@ app.post('/api/upload', upload.single('screenshot'), async (req, res) => {
 
         console.log('📸 Processing screenshot upload:', req.file.filename);
 
+        // Store file in appropriate storage (Vercel Blob for production, local for dev)
+        const storedPath = await storeFile(req.file.path, req.file.filename);
+
         // If tradeId is provided, associate with specific trade
         const tradeId = req.body.tradeId;
         
         if (tradeId) {
             // Associate screenshot with specific trade
-            await database.updateTradeScreenshot(tradeId, req.file.path);
+            await database.updateTradeScreenshot(tradeId, storedPath);
             console.log('✅ Screenshot associated with trade ID:', tradeId);
         } else {
             // Associate with latest trade (default behavior)
             const latestTrade = await database.getLatestTrade();
             if (latestTrade) {
-                await database.updateTradeScreenshot(latestTrade.id, req.file.path);
+                await database.updateTradeScreenshot(latestTrade.id, storedPath);
                 console.log('✅ Screenshot associated with latest trade:', latestTrade.symbol);
             } else {
                 console.log('⚠️ No trades found to associate screenshot with');
@@ -150,7 +189,7 @@ app.post('/api/upload', upload.single('screenshot'), async (req, res) => {
 
         res.json({
             success: true,
-            screenshotPath: req.file.path,
+            screenshotPath: storedPath,
             message: 'Screenshot uploaded and associated successfully'
         });
 
