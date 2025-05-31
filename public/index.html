@@ -911,6 +911,8 @@
 
         // Edit Trade Modal Functions
         async function openEditModal(tradeId) {
+            closeAllModals(); // Close any existing modals first
+            
             try {
                 const response = await fetch(`/api/trades/${tradeId}`);
                 if (!response.ok) {
@@ -1014,6 +1016,8 @@
 
         // Screenshot Modal Functions
         function openScreenshotModal(screenshotPath, symbol) {
+            closeAllModals(); // Close any existing modals first
+            
             const modal = document.getElementById('screenshotModal');
             const image = document.getElementById('screenshotModalImage');
             const title = document.getElementById('screenshotModalTitle');
@@ -1045,6 +1049,8 @@
         let currentTradeId = null;
 
         async function openTradeDetailModal(tradeId) {
+            closeAllModals(); // Close any existing modals first
+            
             currentTradeId = tradeId;
             
             try {
@@ -1476,6 +1482,8 @@
 
         // Daily trades modal
         function openDailyTradesModal(date, trades) {
+            closeAllModals(); // Close any existing modals first
+            
             const dateStr = date.toLocaleDateString('en-US', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -1564,6 +1572,25 @@
         // Load initial data
         document.addEventListener('DOMContentLoaded', () => {
             loadTrades();
+        });
+
+        // Global Modal Management System
+        function closeAllModals() {
+            // Close all modals to prevent stacking
+            document.getElementById('editModal').style.display = 'none';
+            document.getElementById('screenshotModal').style.display = 'none';
+            document.getElementById('tradeDetailModal').style.display = 'none';
+            document.getElementById('dailyTradesModal').style.display = 'none';
+            
+            // Reset any modal-specific state
+            currentTradeId = null;
+        }
+
+        // Enhanced Escape key handler to close any open modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeAllModals();
+            }
         });
     </script>
 </body>
