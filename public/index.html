@@ -1270,6 +1270,13 @@
             try {
                 const response = await fetch('/api/trades');
                 allTrades = await response.json();
+                
+                // Debug: Log all trades and their dates
+                console.log('📊 Loading calendar with trades:', allTrades.length);
+                allTrades.forEach((trade, index) => {
+                    console.log(`Trade ${index + 1}: ${trade.symbol} on ${trade.date} P/L: $${(trade.actualPnL || trade.actual_pnl || 0).toFixed(2)}`);
+                });
+                
                 generateCalendar();
             } catch (error) {
                 console.error('Error loading calendar data:', error);
@@ -1372,6 +1379,15 @@
             const totalPnL = dayTrades.reduce((sum, trade) => sum + (trade.actualPnL || trade.actual_pnl || 0), 0);
             const hasJournalNotes = dayTrades.some(trade => trade.reasoning && trade.reasoning.trim().length > 0);
             
+            // Debug logging for dates
+            if (dayTrades.length > 0) {
+                const calendarDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                console.log(`📅 Calendar day ${dayNumber}: ${calendarDateStr} has ${dayTrades.length} trades with P/L: $${totalPnL.toFixed(2)}`);
+                dayTrades.forEach(trade => {
+                    console.log(`  - Trade: ${trade.symbol} ${trade.direction} on ${trade.date} P/L: $${(trade.actualPnL || trade.actual_pnl || 0).toFixed(2)}`);
+                });
+            }
+            
             // Determine day class
             let dayClass = 'calendar-day';
             if (isToday(date)) dayClass += ' today';
@@ -1399,25 +1415,31 @@
         }
 
         function getTradesForDate(date) {
-            // Format date without timezone conversion to avoid offset issues
+            // Format the calendar date as YYYY-MM-DD string
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
-            const targetDate = `${year}-${month}-${day}`;
+            const targetDateStr = `${year}-${month}-${day}`;
             
             return allTrades.filter(trade => {
-                // Handle both date formats that might be in the database
-                let tradeDate = trade.date;
-                if (tradeDate.includes('T')) {
-                    tradeDate = tradeDate.split('T')[0]; // Remove time part if present
+                // Get trade date as string, handle various formats
+                let tradeDateStr = trade.date;
+                
+                // If it's a full ISO string, extract just the date part
+                if (tradeDateStr && tradeDateStr.includes('T')) {
+                    tradeDateStr = tradeDateStr.split('T')[0];
                 }
-                return tradeDate === targetDate;
+                
+                // Direct string comparison to avoid timezone issues
+                return tradeDateStr === targetDateStr;
             });
         }
 
         function isToday(date) {
             const today = new Date();
-            return date.toDateString() === today.toDateString();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            return dateStr === todayStr;
         }
 
         function updateMonthlyPnL() {
