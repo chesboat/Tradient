@@ -19,10 +19,15 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
 
-// Create uploads directory if it doesn't exist
-const uploadsDir = './uploads';
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
+// Create uploads directory if it doesn't exist (only in development)
+const uploadsDir = process.env.NODE_ENV === 'production' ? '/tmp/uploads' : './uploads';
+try {
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+        console.log('📁 Created uploads directory:', uploadsDir);
+    }
+} catch (error) {
+    console.warn('⚠️  Could not create uploads directory:', error.message);
 }
 
 // Configure multer for file uploads
@@ -50,13 +55,26 @@ const upload = multer({
     }
 });
 
-// Initialize database
-database.init();
+// Initialize database with error handling
+try {
+    database.init();
+    console.log('📊 Database initialization attempted');
+} catch (error) {
+    console.error('Database initialization failed:', error);
+    console.warn('⚠️  Continuing without database support');
+}
 
-console.log('🚀 PropJournal server running on http://localhost:3000');
+console.log('🚀 PropJournal server starting...');
 console.log('📊 Ready to process TradingView position tool data!');
-console.log('📊 Connected to SQLite database');
-console.log('✅ Trades table ready');
+
+// Health check route
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development'
+    });
+});
 
 // Routes
 app.get('/', (req, res) => {

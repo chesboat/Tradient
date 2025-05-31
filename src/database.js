@@ -4,21 +4,33 @@ const path = require('path');
 class Database {
     constructor() {
         this.db = null;
+        this.isConnected = false;
     }
 
     init() {
-        const dbPath = path.join(__dirname, '..', 'trades.db');
-        this.db = new sqlite3.Database(dbPath, (err) => {
-            if (err) {
-                console.error('Error opening database:', err);
-            } else {
-                console.log('📊 Connected to SQLite database');
-                this.createTables();
-            }
-        });
+        try {
+            const dbPath = process.env.NODE_ENV === 'production' ? '/tmp/trades.db' : path.join(__dirname, '..', 'trades.db');
+            this.db = new sqlite3.Database(dbPath, (err) => {
+                if (err) {
+                    console.error('Error opening database:', err);
+                    console.warn('⚠️  Database not available - running in limited mode');
+                    this.isConnected = false;
+                } else {
+                    console.log('📊 Connected to SQLite database');
+                    this.isConnected = true;
+                    this.createTables();
+                }
+            });
+        } catch (error) {
+            console.error('Database initialization failed:', error);
+            console.warn('⚠️  Running without database support');
+            this.isConnected = false;
+        }
     }
 
     createTables() {
+        if (!this.isConnected) return;
+        
         this.db.exec(`
             CREATE TABLE IF NOT EXISTS trades (
                 id TEXT PRIMARY KEY,
@@ -53,6 +65,11 @@ class Database {
     }
 
     async saveTrade(tradeData) {
+        if (!this.isConnected) {
+            console.warn('⚠️  Database not available - trade not saved');
+            return { ...tradeData, warning: 'Database not available' };
+        }
+        
         return new Promise((resolve, reject) => {
             const sql = `
                 INSERT INTO trades (
@@ -105,6 +122,11 @@ class Database {
     }
 
     async getAllTrades() {
+        if (!this.isConnected) {
+            console.warn('⚠️  Database not available - returning empty trades list');
+            return [];
+        }
+        
         return new Promise((resolve, reject) => {
             const sql = `
                 SELECT * FROM trades 
