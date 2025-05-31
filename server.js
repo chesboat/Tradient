@@ -78,9 +78,12 @@ try {
 
 // Function to handle file upload to appropriate storage
 async function storeFile(filePath, filename) {
+    console.log('🔧 storeFile called with:', { filePath, filename, env: process.env.NODE_ENV, hasVercelBlob: !!vercelBlob });
+    
     try {
         if (process.env.NODE_ENV === 'production' && vercelBlob) {
             // Production: Use Vercel Blob
+            console.log('📸 Using Vercel Blob storage');
             const fileBuffer = fs.readFileSync(filePath);
             const blob = await vercelBlob.put(filename, fileBuffer, {
                 access: 'public',
@@ -97,19 +100,25 @@ async function storeFile(filePath, filename) {
             const fileBuffer = fs.readFileSync(filePath);
             const base64 = fileBuffer.toString('base64');
             const mimeType = 'image/png'; // Assume PNG for screenshots
+            const dataUrl = `data:${mimeType};base64,${base64}`;
             
             // Clean up local temp file
             fs.unlinkSync(filePath);
             
-            return `data:${mimeType};base64,${base64}`;
+            console.log('📸 File converted to base64, length:', base64.length);
+            return dataUrl;
         } else {
             // Development: Use local storage with proper URL prefix
-            return `/uploads/${path.basename(filePath)}`;
+            const localPath = `/uploads/${path.basename(filePath)}`;
+            console.log('💻 Using local storage:', localPath);
+            return localPath;
         }
     } catch (error) {
-        console.error('Error storing file:', error);
+        console.error('❌ Error storing file:', error);
         // Fallback to local path
-        return `/uploads/${path.basename(filePath)}`;
+        const fallbackPath = `/uploads/${path.basename(filePath)}`;
+        console.log('🔄 Using fallback path:', fallbackPath);
+        return fallbackPath;
     }
 }
 
@@ -141,6 +150,7 @@ app.post('/api/upload-trade', upload.single('screenshot'), async (req, res) => {
 
         // Store file in appropriate storage (Vercel Blob for production, local for dev)
         const storedPath = await storeFile(req.file.path, req.file.filename);
+        console.log('🗃️ File stored with path:', storedPath);
 
         // Extract trade data from screenshot (use original path for processing)
         const tradeData = await tradeExtractor.extractTradeData(req.file.path);
@@ -181,6 +191,7 @@ app.post('/api/upload', upload.single('screenshot'), async (req, res) => {
 
         // Store file in appropriate storage (Vercel Blob for production, local for dev)
         const storedPath = await storeFile(req.file.path, req.file.filename);
+        console.log('🗃️ File stored with path:', storedPath);
 
         // If tradeId is provided, associate with specific trade
         const tradeId = req.body.tradeId;
@@ -831,6 +842,37 @@ app.delete('/api/trades', async (req, res) => {
 
 // Serve uploaded screenshots
 app.use('/uploads', express.static('uploads'));
+
+// Fallback route for handling old screenshot paths in production
+app.get('/uploads/:filename', (req, res) => {
+    const filename = req.params.filename;
+    const filePath = path.join(__dirname, 'uploads', filename);
+    
+    // In production, if the file doesn't exist locally, return a placeholder or 404
+    if (process.env.NODE_ENV === 'production') {
+        console.log('⚠️ Trying to serve old screenshot in production:', filename);
+        
+        // Check if file exists in local uploads (it won't in production)
+        if (!fs.existsSync(filePath)) {
+            console.log('❌ File not found in production, returning 404');
+            return res.status(404).json({ 
+                error: 'Screenshot not available',
+                message: 'This screenshot was uploaded before proper cloud storage was configured. Please re-upload the screenshot.' 
+            });
+        }
+    }
+    
+    // Development: serve the file normally
+    res.sendFile(filePath, (err) => {
+        if (err) {
+            console.error('Error serving file:', err);
+            res.status(404).json({ 
+                error: 'Screenshot not found',
+                message: 'The requested screenshot could not be found.' 
+            });
+        }
+    });
+});
 
 // Error handling middleware
 app.use((error, req, res, next) => {

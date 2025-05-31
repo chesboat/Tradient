@@ -1103,15 +1103,45 @@
                 if (trade.screenshotPath) {
                     screenshotContainer.innerHTML = `
                         <div class="screenshot-preview">
-                            <img src="${trade.screenshotPath}" alt="Trade Screenshot" onclick="openScreenshotModal('${trade.screenshotPath}', '${trade.symbol}')">
-                            <div class="screenshot-overlay">Click to view full size</div>
+                            <img id="tradeScreenshotImg" src="${trade.screenshotPath}" alt="Trade Screenshot" onclick="openScreenshotModal('${trade.screenshotPath}', '${trade.symbol}')" style="display: none;">
+                            <div class="screenshot-loading" id="screenshotLoading">
+                                <div class="loading-spinner"></div>
+                                <p>Loading screenshot...</p>
+                            </div>
+                            <div class="screenshot-error" id="screenshotError" style="display: none;">
+                                <p>📷 Screenshot unavailable</p>
+                                <small>This screenshot was uploaded before cloud storage was configured.</small>
+                                <button class="btn btn-secondary btn-small" onclick="requestReupload('${trade.id}')">📤 Re-upload Screenshot</button>
+                            </div>
+                            <div class="screenshot-overlay" style="display: none;">Click to view full size</div>
                         </div>
                     `;
+                    
+                    // Handle image loading
+                    const img = document.getElementById('tradeScreenshotImg');
+                    const loading = document.getElementById('screenshotLoading');
+                    const error = document.getElementById('screenshotError');
+                    const overlay = screenshotContainer.querySelector('.screenshot-overlay');
+                    
+                    img.onload = function() {
+                        loading.style.display = 'none';
+                        error.style.display = 'none';
+                        img.style.display = 'block';
+                        overlay.style.display = 'block';
+                    };
+                    
+                    img.onerror = function() {
+                        loading.style.display = 'none';
+                        img.style.display = 'none';
+                        overlay.style.display = 'none';
+                        error.style.display = 'block';
+                    };
                 } else {
                     screenshotContainer.innerHTML = `
                         <div class="no-screenshot">
                             <p>📷 No screenshot available</p>
                             <small>Screenshots can be added by pasting them after processing position tool data</small>
+                            <button class="btn btn-secondary btn-small" onclick="requestReupload('${trade.id}')">📤 Add Screenshot</button>
                         </div>
                     `;
                 }
