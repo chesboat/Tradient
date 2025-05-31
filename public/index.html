@@ -22,6 +22,7 @@
         <div class="tabs">
             <button class="tab-btn active" data-tab="upload">📋 Paste Trade</button>
             <button class="tab-btn" data-tab="journal">📖 Journal</button>
+            <button class="tab-btn" data-tab="calendar">📅 Calendar</button>
             <button class="tab-btn" data-tab="analytics">📈 Analytics</button>
         </div>
 
@@ -126,6 +127,29 @@
                 <h2>📈 Performance Analytics</h2>
                 <div id="analyticsContent" class="analytics-content">
                     <!-- Analytics will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendar Tab -->
+        <div id="calendar" class="tab-content">
+            <div class="calendar-section">
+                <div class="calendar-header">
+                    <h2>📅 Trading Calendar</h2>
+                    <div class="calendar-controls">
+                        <button id="prevMonth" class="btn btn-secondary calendar-nav">‹</button>
+                        <h3 id="monthYearDisplay">May 2025</h3>
+                        <button id="nextMonth" class="btn btn-secondary calendar-nav">›</button>
+                        <button id="todayBtn" class="btn btn-primary">Today</button>
+                    </div>
+                    <div class="monthly-summary">
+                        <span class="monthly-label">Monthly P/L:</span>
+                        <span id="monthlyPnL" class="monthly-value">$0.00</span>
+                    </div>
+                </div>
+                
+                <div id="calendarGrid" class="calendar-grid">
+                    <!-- Calendar will be generated here -->
                 </div>
             </div>
         </div>
@@ -290,6 +314,24 @@
         </div>
     </div>
 
+    <!-- Daily Trades Modal -->
+    <div id="dailyTradesModal" class="modal">
+        <div class="modal-content daily-trades-modal">
+            <div class="modal-header">
+                <h3 id="dailyTradesTitle">📅 Daily Trades</h3>
+                <button type="button" class="close-btn" onclick="closeDailyTradesModal()">×</button>
+            </div>
+            <div class="daily-trades-content">
+                <div class="daily-summary" id="dailySummary">
+                    <!-- Daily summary will be populated here -->
+                </div>
+                <div class="daily-trades-list" id="dailyTradesList">
+                    <!-- Daily trades list will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Tab functionality
         document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -307,6 +349,7 @@
                 // Load data for specific tabs
                 if (tabId === 'journal') loadTrades();
                 if (tabId === 'analytics') loadAnalytics();
+                if (tabId === 'calendar') loadCalendar();
             });
         });
 
@@ -1215,6 +1258,275 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && document.getElementById('tradeDetailModal').style.display === 'flex') {
                 closeTradeDetailModal();
+            }
+        });
+
+        // Calendar functionality
+        let currentDate = new Date();
+        let allTrades = [];
+
+        // Initialize calendar when tab is loaded
+        async function loadCalendar() {
+            try {
+                const response = await fetch('/api/trades');
+                allTrades = await response.json();
+                generateCalendar();
+            } catch (error) {
+                console.error('Error loading calendar data:', error);
+            }
+        }
+
+        function generateCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            // Update month/year display
+            document.getElementById('monthYearDisplay').textContent = 
+                new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            
+            // Generate calendar grid
+            const calendarGrid = document.getElementById('calendarGrid');
+            calendarGrid.innerHTML = '';
+            
+            // Add day headers
+            const dayHeaders = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Week'];
+            dayHeaders.forEach(day => {
+                const header = document.createElement('div');
+                header.className = day === 'Week' ? 'calendar-week-header' : 'calendar-day-header';
+                header.textContent = day;
+                calendarGrid.appendChild(header);
+            });
+            
+            // Get first day of month and number of days
+            const firstDayOfMonth = new Date(year, month, 1);
+            const lastDayOfMonth = new Date(year, month + 1, 0);
+            const firstDayWeekday = firstDayOfMonth.getDay();
+            const daysInMonth = lastDayOfMonth.getDate();
+            
+            // Add empty cells for days before the month starts
+            const daysToAdd = firstDayWeekday;
+            for (let i = 0; i < daysToAdd; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day other-month';
+                const prevMonthDay = new Date(year, month, -(daysToAdd - 1 - i));
+                emptyDay.innerHTML = `<div class="calendar-day-number">${prevMonthDay.getDate()}</div>`;
+                calendarGrid.appendChild(emptyDay);
+            }
+            
+            // Generate days for current month
+            let weekTrades = [];
+            let weekPnL = 0;
+            let weekCount = 0;
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const currentDay = new Date(year, month, day);
+                const dayElement = createCalendarDay(currentDay, day);
+                calendarGrid.appendChild(dayElement);
+                
+                // Collect week data
+                const dayTrades = getTradesForDate(currentDay);
+                const dayPnL = dayTrades.reduce((sum, trade) => sum + (trade.actual_pnl || 0), 0);
+                weekPnL += dayPnL;
+                weekCount += dayTrades.length;
+                weekTrades = weekTrades.concat(dayTrades);
+                
+                // Add week summary at end of week (Saturday) or end of month
+                if (currentDay.getDay() === 6 || day === daysInMonth) {
+                    const weekSummary = document.createElement('div');
+                    weekSummary.className = `week-summary ${weekPnL > 0 ? 'profit' : weekPnL < 0 ? 'loss' : ''}`;
+                    
+                    const weekNumber = Math.ceil((day + firstDayWeekday) / 7);
+                    weekSummary.innerHTML = `
+                        <div class="week-label">Week ${weekNumber}</div>
+                        <div class="week-pnl">${weekPnL >= 0 ? '+' : ''}$${weekPnL.toFixed(2)}</div>
+                        <div class="week-trades">${weekCount} trades</div>
+                    `;
+                    calendarGrid.appendChild(weekSummary);
+                    
+                    // Reset week counters
+                    weekTrades = [];
+                    weekPnL = 0;
+                    weekCount = 0;
+                }
+            }
+            
+            // Fill remaining cells if needed
+            const totalCells = calendarGrid.children.length;
+            const targetCells = Math.ceil(totalCells / 8) * 8;
+            const remainingDays = targetCells - totalCells;
+            
+            for (let i = 1; i <= remainingDays; i++) {
+                const nextMonthDay = document.createElement('div');
+                nextMonthDay.className = 'calendar-day other-month';
+                nextMonthDay.innerHTML = `<div class="calendar-day-number">${i}</div>`;
+                calendarGrid.appendChild(nextMonthDay);
+            }
+            
+            // Update monthly P/L
+            updateMonthlyPnL();
+        }
+
+        function createCalendarDay(date, dayNumber) {
+            const dayElement = document.createElement('div');
+            const dayTrades = getTradesForDate(date);
+            const totalPnL = dayTrades.reduce((sum, trade) => sum + (trade.actual_pnl || 0), 0);
+            const hasJournalNotes = dayTrades.some(trade => trade.reasoning && trade.reasoning.trim().length > 0);
+            
+            // Determine day class
+            let dayClass = 'calendar-day';
+            if (isToday(date)) dayClass += ' today';
+            else if (totalPnL > 0) dayClass += ' profit';
+            else if (totalPnL < 0) dayClass += ' loss';
+            else if (dayTrades.length === 0) dayClass += ' no-trades';
+            
+            dayElement.className = dayClass;
+            dayElement.onclick = () => openDailyTradesModal(date, dayTrades);
+            
+            // Create day content
+            let dayContent = `<div class="calendar-day-number">${dayNumber}</div>`;
+            
+            if (dayTrades.length > 0) {
+                dayContent += `<div class="calendar-day-pnl">${totalPnL >= 0 ? '+' : ''}$${totalPnL.toFixed(2)}</div>`;
+                dayContent += `<div class="calendar-day-trades">${dayTrades.length} trade${dayTrades.length !== 1 ? 's' : ''}</div>`;
+            }
+            
+            if (hasJournalNotes) {
+                dayContent += `<div class="calendar-day-indicators"><span class="journal-indicator">📒</span></div>`;
+            }
+            
+            dayElement.innerHTML = dayContent;
+            return dayElement;
+        }
+
+        function getTradesForDate(date) {
+            const targetDate = date.toISOString().split('T')[0];
+            return allTrades.filter(trade => {
+                const tradeDate = new Date(trade.date).toISOString().split('T')[0];
+                return tradeDate === targetDate;
+            });
+        }
+
+        function isToday(date) {
+            const today = new Date();
+            return date.toDateString() === today.toDateString();
+        }
+
+        function updateMonthlyPnL() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            const monthlyTrades = allTrades.filter(trade => {
+                const tradeDate = new Date(trade.date);
+                return tradeDate.getFullYear() === year && tradeDate.getMonth() === month;
+            });
+            
+            const monthlyPnL = monthlyTrades.reduce((sum, trade) => sum + (trade.actual_pnl || 0), 0);
+            const monthlyPnLElement = document.getElementById('monthlyPnL');
+            
+            monthlyPnLElement.textContent = `${monthlyPnL >= 0 ? '+' : ''}$${monthlyPnL.toFixed(2)}`;
+            monthlyPnLElement.className = `monthly-value ${monthlyPnL > 0 ? 'profit' : monthlyPnL < 0 ? 'loss' : ''}`;
+        }
+
+        // Calendar navigation
+        document.getElementById('prevMonth').addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            generateCalendar();
+        });
+
+        document.getElementById('nextMonth').addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            generateCalendar();
+        });
+
+        document.getElementById('todayBtn').addEventListener('click', () => {
+            currentDate = new Date();
+            generateCalendar();
+        });
+
+        // Daily trades modal
+        function openDailyTradesModal(date, trades) {
+            const dateStr = date.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            document.getElementById('dailyTradesTitle').textContent = `📅 ${dateStr}`;
+            
+            // Update daily summary
+            const totalPnL = trades.reduce((sum, trade) => sum + (trade.actual_pnl || 0), 0);
+            const winTrades = trades.filter(trade => (trade.actual_pnl || 0) > 0).length;
+            const lossTrades = trades.filter(trade => (trade.actual_pnl || 0) < 0).length;
+            const winRate = trades.length > 0 ? ((winTrades / trades.length) * 100).toFixed(1) : '0';
+            
+            document.getElementById('dailySummary').innerHTML = `
+                <div class="daily-stat">
+                    <div class="daily-stat-label">Total P/L</div>
+                    <div class="daily-stat-value ${totalPnL > 0 ? 'profit' : totalPnL < 0 ? 'loss' : ''}">${totalPnL >= 0 ? '+' : ''}$${totalPnL.toFixed(2)}</div>
+                </div>
+                <div class="daily-stat">
+                    <div class="daily-stat-label">Total Trades</div>
+                    <div class="daily-stat-value">${trades.length}</div>
+                </div>
+                <div class="daily-stat">
+                    <div class="daily-stat-label">Win Rate</div>
+                    <div class="daily-stat-value">${winRate}%</div>
+                </div>
+                <div class="daily-stat">
+                    <div class="daily-stat-label">Wins / Losses</div>
+                    <div class="daily-stat-value">${winTrades} / ${lossTrades}</div>
+                </div>
+            `;
+            
+            // Update trades list
+            if (trades.length === 0) {
+                document.getElementById('dailyTradesList').innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #6b7280;">
+                        <p>No trades on this day</p>
+                    </div>
+                `;
+            } else {
+                document.getElementById('dailyTradesList').innerHTML = trades.map(trade => `
+                    <div class="daily-trade-item" onclick="openTradeDetailModal('${trade.id}')">
+                        <div class="daily-trade-header">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span class="daily-trade-symbol">${trade.symbol}</span>
+                                <span class="daily-trade-direction ${trade.direction}">${trade.direction?.toUpperCase() || 'Unknown'}</span>
+                            </div>
+                            <span class="daily-trade-pnl ${(trade.actual_pnl || 0) > 0 ? 'profit' : (trade.actual_pnl || 0) < 0 ? 'loss' : ''}">
+                                ${(trade.actual_pnl || 0) >= 0 ? '+' : ''}$${(trade.actual_pnl || 0).toFixed(2)}
+                            </span>
+                        </div>
+                        <div class="daily-trade-details">
+                            <span>Entry: ${trade.entry_price || 'N/A'}</span>
+                            <span>Exit: ${trade.exit_price || 'N/A'}</span>
+                            <span>R/R: ${trade.planned_rr ? trade.planned_rr.toFixed(2) : 'N/A'}</span>
+                            <span class="daily-trade-time">${new Date(trade.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        ${trade.reasoning ? `<div style="margin-top: 8px; font-size: 0.85rem; color: #6b7280; font-style: italic;">"${trade.reasoning.length > 80 ? trade.reasoning.substring(0, 80) + '...' : trade.reasoning}"</div>` : ''}
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('dailyTradesModal').style.display = 'flex';
+        }
+
+        function closeDailyTradesModal() {
+            document.getElementById('dailyTradesModal').style.display = 'none';
+        }
+
+        // Close daily trades modal when clicking outside
+        document.getElementById('dailyTradesModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('dailyTradesModal')) {
+                closeDailyTradesModal();
+            }
+        });
+
+        // Close daily trades modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.getElementById('dailyTradesModal').style.display === 'flex') {
+                closeDailyTradesModal();
             }
         });
 

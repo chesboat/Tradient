@@ -20,6 +20,30 @@ PropJournal offers comprehensive trading analysis with the following key feature
 - Statistical analysis with win rates and performance metrics
 - Raw extracted text and analysis data for debugging
 
+### 📋 Trade Input
+- **Smart Paste Zone**: Copy TradingView position tool data and paste directly into the app
+- **Screenshot Support**: Drag & drop or paste TradingView screenshots for visual trade records
+- **AI-Powered Extraction**: Automatically extracts trade data using OCR and AI analysis
+
+### 📖 Trade Journal
+- **Trade Management**: View, edit, and manage all your trades
+- **Risk Analysis**: Detailed risk/reward calculations and position sizing
+- **Journal Entries**: Add notes and analysis to each trade
+- **Filtering**: Filter trades by symbol, outcome, and other criteria
+
+### 📅 Trading Calendar (NEW!)
+- **Visual Trade Overview**: Monthly calendar view showing daily P/L and trade counts
+- **Color-Coded Days**: Green for profitable days, red for losses, yellow for today
+- **Weekly Summaries**: Right column shows weekly P/L totals and trade counts
+- **Monthly P/L**: Header displays total monthly performance
+- **Journal Indicators**: 📒 icon shows days with journal notes
+- **Daily Drill-Down**: Click any day to see detailed trade breakdowns
+- **Navigation**: Easy month-to-month navigation with "Today" quick access
+
+### 📈 Analytics
+- **Performance Metrics**: Win rate, average R/R, total P/L
+- **Trade Statistics**: Comprehensive analysis of trading performance
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -228,3 +252,67 @@ Having issues? Here's how to get help:
 **Happy Trading! 📈📊**
 
 *Made with ❤️ for traders who want to focus on trading, not data entry.* 
+
+## Calendar Features
+
+The new calendar view provides a TopstepX-style visual representation of your trading activity:
+
+### Daily View
+- **P/L Display**: Each day shows total profit/loss in USD
+- **Trade Count**: Number of trades executed that day
+- **Color Coding**: 
+  - 🟢 Green: Profitable days
+  - 🔴 Red: Loss days
+  - 🟡 Yellow: Current day
+  - ⬜ Gray: No trades
+- **Journal Indicator**: 📒 icon for days with trade notes
+
+### Weekly Summary
+- **Weekly P/L**: Total profit/loss for each week
+- **Weekly Trade Count**: Total trades for the week
+- **Color-coded** based on weekly performance
+
+### Daily Detail Modal
+- **Trade Breakdown**: Click any day to see all trades for that date
+- **Daily Statistics**: Total P/L, win rate, trade count
+- **Individual Trade Cards**: Each trade shows symbol, direction, P/L, and key metrics
+- **Quick Access**: Click any trade card to open full trade details
+
+### Navigation
+- **Month Navigation**: Previous/Next buttons to browse months
+- **Today Button**: Quick jump to current month
+- **Responsive Design**: Works on desktop and mobile devices
+
+## Technology Stack
+
+- **Backend**: Node.js with Express
+- **Database**: SQLite for trade storage
+- **Frontend**: Vanilla HTML/CSS/JavaScript
+- **AI/OCR**: OpenAI API and Tesseract.js for data extraction
+- **Styling**: Modern CSS with gradients and responsive design
+
+## Installation
+
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Set up environment variables (OpenAI API key)
+4. Run the server: `npm start`
+5. Open `http://localhost:3000` in your browser
+
+## Usage
+
+1. **Add Trades**: Copy TradingView position tool data and paste in the upload tab
+2. **Attach Screenshots**: Paste screenshots to associate with trades
+3. **View Calendar**: Switch to the Calendar tab to see your trading activity visually
+4. **Analyze Performance**: Use the Analytics tab for comprehensive performance metrics
+5. **Journal Entries**: Add notes and analysis to trades for future reference
+
+## API Endpoints
+
+- `GET /api/trades` - Get all trades
+- `POST /api/upload-trade` - Upload screenshot and extract trade data
+- `POST /api/process-trade-text` - Process TradingView text data
+- `PUT /api/trades/:id` - Update trade information
+- `GET /api/analytics` - Get performance analytics
+
+The calendar seamlessly integrates with existing trade data and provides an intuitive way to review trading performance over time. 
