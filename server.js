@@ -15,8 +15,10 @@ let vercelBlob = null;
 if (process.env.NODE_ENV === 'production') {
     try {
         vercelBlob = require('@vercel/blob');
+        console.log('✅ Vercel Blob imported successfully');
     } catch (error) {
-        console.warn('⚠️ Vercel Blob not available, using local storage');
+        console.warn('⚠️ Vercel Blob not available, using fallback storage');
+        console.warn('Error details:', error.message);
     }
 }
 
@@ -89,6 +91,17 @@ async function storeFile(filePath, filename) {
             
             console.log('📸 File stored in Vercel Blob:', blob.url);
             return blob.url;
+        } else if (process.env.NODE_ENV === 'production') {
+            // Production fallback: Convert to base64 data URL
+            console.log('⚠️ Vercel Blob not available, using base64 data URL');
+            const fileBuffer = fs.readFileSync(filePath);
+            const base64 = fileBuffer.toString('base64');
+            const mimeType = 'image/png'; // Assume PNG for screenshots
+            
+            // Clean up local temp file
+            fs.unlinkSync(filePath);
+            
+            return `data:${mimeType};base64,${base64}`;
         } else {
             // Development: Use local storage with proper URL prefix
             return `/uploads/${path.basename(filePath)}`;
